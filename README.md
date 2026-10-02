@@ -42,20 +42,21 @@ python main.py
 
 Each task must be completed using an iterative process involving LLM suggestions and your critical code review.
 
-### Task 1: Fix the input lock deadlock bug
+### Task 1: Fix the Alternating Input Deadlock Bug
 
-When rapidly alternating between A and D, the rope suddenly locks up and stops responding to any player input, giving the computer a free win. In game_engine.handle_event(), self.is_pull_locked is set to True on key down, but it only unlocks on KEYUP if event.key == self.last_key. If the player presses the second key before fully releasing the first key (standard rapid keystroke overlap), self.last_key gets updated, preventing the previous key release from ever setting self.is_pull_locked = False. Remove the broken locking flag mechanism or redesign the debounce logic so simply alternating keys (event.key != self.last_key) successfully pulls without permanently freezing input.
+Rapidly mashing back and forth between A and D suddenly freezes input handling completely, leaving the rope unresponsive while the computer effortlessly pulls away with the win. Redesign the input synchronization so that overlapping or rapid alternating keystrokes consistently register pulls without locking the player out.
 
-### Task 2: Implement dynamic computer difficulty surge
+### Task 2: Implement Dynamic AI Panic Surges
 
-Right now, the computer pulls at a fixed interval of 180ms with minor random variance. Implement dynamic difficulty in game_engine.update(): if the center flag gets pulled closer to the player's goal line (self.rope.left_win_x), have the computer enter a "panic surge" mode by decreasing its cooldown or increasing its pulling strength to fight back aggressively
+The computer currently pulls at a fixed cadence with minimal variation. Introduce dynamic difficulty: as the center marker gets pulled closer to the player's winning threshold, have the computer enter a high-intensity panic surge with faster reaction intervals and aggressive pulling strength to stage a comeback.
 
-### Task 3: Implement rope tension and pull animations
+### Task 3: Implement Rope Tension & Puller Leaning Animations
 
-Currently, the rope is drawn as a static straight horizontal line, and puller positions do not react to movement. In rope.render() and puller.render(), implement rope sag or tension effects (e.g., slight vertical vibration/waviness when tension is high) and add a leaning animation to each puller that tilts backwards according to who has pulling momentum
+The rope and pullers are currently visually static. Add dynamic visual feedback: give the rope a vibrating high-tension hum or sag depending on struggle intensity, and animate both characters with backward leaning postures based on which side holds pulling momentum.
 
 ### Task 4: Implement a match timer and sudden death mode
-If two evenly matched opponents play, a match can last indefinitely. Add an active match timer displayed at the top of the screen. If neither side has won after 45 seconds, enter "Sudden Death" mode: double the pull distance of every keystroke and computer tick so the match finishes quickly.
+
+Matches between evenly matched opponents can drag on indefinitely. Add a live match timer at the top of the screen. If no side has won within 45 seconds, trigger a "Sudden Death" state that doubles pulling power across all actions to force a swift finish.
 
 ---
 
