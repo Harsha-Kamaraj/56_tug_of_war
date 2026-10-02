@@ -28,9 +28,6 @@ class GameEngine:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 self.reset()
             return
-        #BUG SYMPTOM:
-        # Rapidly alternating between 'A' and 'D' causes the rope to suddenly
-        # stop responding. The Computer easily pulls the rope to its side and wins while the player tries hard to pull the rope to its side.
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_a, pygame.K_d):
