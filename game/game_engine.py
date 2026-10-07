@@ -23,6 +23,12 @@ class GameEngine:
         self.panic_max_strength = 1.4      # strongest pull multiplier at max panic
         self.is_panicking = False
         self.last_computer_pull = pygame.time.get_ticks()
+                # Match timer & sudden death
+        self.match_duration = 45000        # ms before sudden death kicks in
+        self.match_start = pygame.time.get_ticks()
+        self.elapsed_ms = 0
+        self.sudden_death = False
+        self.power_multiplier = 1.0
 
         self.font_big = pygame.font.SysFont(None, 48)
         self.font_small = pygame.font.SysFont(None, 26)
@@ -36,7 +42,7 @@ class GameEngine:
         # Count a pull on every KEYDOWN that alternates from the previous key.
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_a, pygame.K_d):
             if event.key != self.last_key:
-                self.rope.pull_left(1.0)
+                self.rope.pull_left(1.0 * self.power_multiplier)
                 self.last_key = event.key
         
     def update(self):
@@ -44,6 +50,11 @@ class GameEngine:
             return
 
         now = pygame.time.get_ticks()
+        # Match timer: switch to sudden death after 45 s
+        self.elapsed_ms = now - self.match_start
+        if not self.sudden_death and self.elapsed_ms >= self.match_duration:
+            self.sudden_death = True
+            self.power_multiplier = 2.0
 
         # danger: 0.0 = flag at centre (or on computer's side), 1.0 = flag at player's goal line
         center = self.width / 2
@@ -62,7 +73,7 @@ class GameEngine:
 
         if now - self.last_computer_pull >= cooldown:
             computer_variance = random.uniform(0.7, 1.2)
-            self.rope.pull_right(computer_variance * strength_boost)
+            self.rope.pull_right(computer_variance * strength_boost * self.power_multiplier)
             self.last_computer_pull = now
 
         self.update_animations()
@@ -88,6 +99,10 @@ class GameEngine:
         self.game_state = "PLAYING"
         self.last_computer_pull = pygame.time.get_ticks()
         self.is_panicking = False
+        self.match_start = pygame.time.get_ticks()
+        self.elapsed_ms = 0
+        self.sudden_death = False
+        self.power_multiplier = 1.0
 
     def render(self, screen):
         screen.fill((30, 32, 36))
@@ -103,6 +118,23 @@ class GameEngine:
             "Alternate [A] and [D] keys rapidly to pull!", True, (210, 210, 210)
         )
         screen.blit(inst_surf, (self.width // 2 - inst_surf.get_width() // 2, 40))
+        # Match timer at the top
+        seconds = self.elapsed_ms // 1000
+        clock_text = f"{seconds // 60}:{seconds % 60:02d}"
+        if self.sudden_death:
+            timer_text = f"TIME {clock_text}  |  SUDDEN DEATH - 2x POWER!"
+            timer_col = (255, 80, 80)
+        else:
+            left = (self.match_duration - self.elapsed_ms + 999) // 1000
+            timer_text = f"TIME {clock_text}  |  Sudden death in {left}s"
+            timer_col = (240, 240, 240)
+        timer_surf = self.font_small.render(timer_text, True, timer_col)
+        screen.blit(timer_surf, (self.width // 2 - timer_surf.get_width() // 2, 12))
+
+        # Big sudden death banner at the bottom
+        if self.sudden_death and self.game_state == "PLAYING":
+            sd_surf = self.font_big.render("SUDDEN DEATH!", True, (255, 60, 60))
+            screen.blit(sd_surf, (self.width // 2 - sd_surf.get_width() // 2, self.height - 70))
         if self.is_panicking and self.game_state == "PLAYING":
             # Flash on/off every 150 ms
             if (pygame.time.get_ticks() // 150) % 2 == 0:
