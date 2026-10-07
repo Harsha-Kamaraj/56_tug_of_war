@@ -16,7 +16,12 @@ class GameEngine:
         self.winner = None
         self.game_state = "PLAYING"
 
-        self.computer_pull_cooldown = 180
+                # Computer AI settings
+        self.base_pull_cooldown = 180      # ms between pulls when calm
+        self.panic_threshold = 0.5         # panic once the player is 50% of the way to winning
+        self.panic_min_cooldown = 120      # fastest pull interval at max panic (ms)
+        self.panic_max_strength = 1.4      # strongest pull multiplier at max panic
+        self.is_panicking = False
         self.last_computer_pull = pygame.time.get_ticks()
 
         self.font_big = pygame.font.SysFont(None, 48)
@@ -39,9 +44,25 @@ class GameEngine:
             return
 
         now = pygame.time.get_ticks()
-        if now - self.last_computer_pull >= self.computer_pull_cooldown:
+
+        # danger: 0.0 = flag at centre (or on computer's side), 1.0 = flag at player's goal line
+        center = self.width / 2
+        danger = (center - self.rope.marker_x) / (center - self.rope.left_win_x)
+        danger = max(0.0, min(1.0, danger))
+
+        self.is_panicking = danger >= self.panic_threshold
+        if self.is_panicking:
+            # surge: 0.0 when panic just starts, 1.0 when the player is about to win
+            surge = (danger - self.panic_threshold) / (1.0 - self.panic_threshold)
+            cooldown = self.base_pull_cooldown - (self.base_pull_cooldown - self.panic_min_cooldown) * surge
+            strength_boost = 1.0 + (self.panic_max_strength - 1.0) * surge
+        else:
+            cooldown = self.base_pull_cooldown
+            strength_boost = 1.0
+
+        if now - self.last_computer_pull >= cooldown:
             computer_variance = random.uniform(0.7, 1.2)
-            self.rope.pull_right(computer_variance)
+            self.rope.pull_right(computer_variance * strength_boost)
             self.last_computer_pull = now
 
         result = self.rope.check_winner()
@@ -55,6 +76,7 @@ class GameEngine:
         self.winner = None
         self.game_state = "PLAYING"
         self.last_computer_pull = pygame.time.get_ticks()
+        self.is_panicking = False
 
     def render(self, screen):
         screen.fill((30, 32, 36))
@@ -70,6 +92,11 @@ class GameEngine:
             "Alternate [A] and [D] keys rapidly to pull!", True, (210, 210, 210)
         )
         screen.blit(inst_surf, (self.width // 2 - inst_surf.get_width() // 2, 40))
+        if self.is_panicking and self.game_state == "PLAYING":
+            # Flash on/off every 150 ms
+            if (pygame.time.get_ticks() // 150) % 2 == 0:
+                panic_surf = self.font_big.render("PANIC SURGE!", True, (255, 70, 70))
+                screen.blit(panic_surf, (self.width // 2 - panic_surf.get_width() // 2, 80))
 
         if self.game_state == "GAME_OVER":
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
