@@ -13,7 +13,6 @@ class GameEngine:
         self.computer = Puller(width - 90, height // 2, (220, 80, 50), "COMPUTER")
 
         self.last_key = None
-        self.is_pull_locked = False
         self.winner = None
         self.game_state = "PLAYING"
 
@@ -29,16 +28,11 @@ class GameEngine:
                 self.reset()
             return
 
-        if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_a, pygame.K_d):
-                if not self.is_pull_locked:
-                    if event.key != self.last_key:
-                        self.rope.pull_left(1.0)
-                        self.last_key = event.key
-                        self.is_pull_locked = True
-        elif event.type == pygame.KEYUP:
-            if event.key == self.last_key:
-                self.is_pull_locked = False
+        # Count a pull on every KEYDOWN that alternates from the previous key.
+        if event.type == pygame.KEYDOWN and event.key in (pygame.K_a, pygame.K_d):
+            if event.key != self.last_key:
+                self.rope.pull_left(1.0)
+                self.last_key = event.key
         
     def update(self):
         if self.game_state != "PLAYING":
@@ -58,7 +52,6 @@ class GameEngine:
     def reset(self):
         self.rope.reset()
         self.last_key = None
-        self.is_pull_locked = False
         self.winner = None
         self.game_state = "PLAYING"
         self.last_computer_pull = pygame.time.get_ticks()
