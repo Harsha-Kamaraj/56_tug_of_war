@@ -9,8 +9,8 @@ class GameEngine:
         self.width = width
         self.height = height
         self.rope = Rope(width, height)
-        self.player = Puller(90, height // 2, (50, 120, 220), "PLAYER (A/D)")
-        self.computer = Puller(width - 90, height // 2, (220, 80, 50), "COMPUTER")
+        self.player = Puller(90, height // 2, (50, 120, 220), "PLAYER (A/D)", facing=1)
+        self.computer = Puller(width - 90, height // 2, (220, 80, 50), "COMPUTER", facing=-1)
 
         self.last_key = None
         self.winner = None
@@ -65,10 +65,21 @@ class GameEngine:
             self.rope.pull_right(computer_variance * strength_boost)
             self.last_computer_pull = now
 
+        self.update_animations()
         result = self.rope.check_winner()
         if result:
             self.winner = result
             self.game_state = "GAME_OVER"
+
+    def update_animations(self):
+        self.rope.update()
+        # advantage: +1 = player winning hard, -1 = computer winning hard
+        advantage = max(-1.0, min(1.0, -self.rope.momentum / 20.0))
+        self.player.set_momentum(advantage)
+        self.computer.set_momentum(-advantage)
+        self.player.update()
+        self.computer.update()
+        self.rope.set_ends(self.player.hand_pos(), self.computer.hand_pos())        
 
     def reset(self):
         self.rope.reset()
